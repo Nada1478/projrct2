@@ -24,18 +24,18 @@ jobs:
 
       - name: Terraform Init
         run: terraform init
-        working-directory: cicd_wordpress/terraform
+        working-directory: terraform
 
       - name: Terraform Apply
         run: terraform apply -auto-approve
-        working-directory: cicd_wordpress/terraform
+        working-directory: terraform
 
       - name: Extract Public IPs from Terraform
         id: tf_output
         run: |
-          echo "wordpress_ip=$(terraform output -raw wordpress_public_ip)" >> $GITHUB_OUTPUT
-          echo "http_ip=$(terraform output -raw http_public_ip)" >> $GITHUB_OUTPUT
-        working-directory: cicd_wordpress/terraform
+          echo "wordpress_ip=$(terraform output -raw wordpress_public_ip)" >> "$GITHUB_OUTPUT"
+          echo "http_ip=$(terraform output -raw http_public_ip)" >> "$GITHUB_OUTPUT"
+        working-directory: terraform
 
       - name: Setup SSH Access
         run: |
@@ -47,15 +47,14 @@ jobs:
 
       - name: Create Ansible Inventory
         run: |
-          mkdir -p cicd_wordpress/ansible
-          echo "[wordpress]" > cicd_wordpress/ansible/inventory.ini
-          echo "${{ steps.tf_output.outputs.wordpress_ip }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa" >> cicd_wordpress/ansible/inventory.ini
-          echo "" >> cicd_wordpress/ansible/inventory.ini
-          echo "[http]" >> cicd_wordpress/ansible/inventory.ini
-          echo "${{ steps.tf_output.outputs.http_ip }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa" >> cicd_wordpress/ansible/inventory.ini
+          echo "[wordpress]" > ansible/inventory.ini
+          echo "${{ steps.tf_output.outputs.wordpress_ip }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa" >> ansible/inventory.ini
+          echo "" >> ansible/inventory.ini
+          echo "[http]" >> ansible/inventory.ini
+          echo "${{ steps.tf_output.outputs.http_ip }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa" >> ansible/inventory.ini
 
       - name: Setup Ansible
         uses: alex-oleshkevich/setup-ansible@v1.0.1
 
       - name: Run Ansible Playbook
-        run: ansible-playbook -i cicd_wordpress/ansible/inventory.ini cicd_wordpress/ansible/playbook.yml
+        run: ansible-playbook -i ansible/inventory.ini ansible/playbook.yml
