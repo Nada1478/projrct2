@@ -87,6 +87,7 @@ resource "aws_instance" "wordpressserver" {
   subnet_id         = aws_subnet.publicsubnet.id
   availability_zone = var.availability_zone
   vpc_security_group_ids = [aws_security_group.secgrp.id]
+  key_name = var.key_name
   tags = {
     Name = "wordpressserver"
   }

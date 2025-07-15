@@ -25,3 +25,8 @@ variable "availability_zone" {
 variable "sec_cider" {
   default = "0.0.0.0/0"
 }
+
+
+variable "key_name" {
+  default = "gns3s"
+}
