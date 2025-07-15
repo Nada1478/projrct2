@@ -9,8 +9,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout code into cicd_wordpress
         uses: actions/checkout@v4
+        with:
+          path: cicd_wordpress
 
       - name: Install Terraform
         uses: little-core-labs/install-terraform@v2.0.0
