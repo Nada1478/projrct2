@@ -22,9 +22,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-north-1
 
-      - name: Terraform Init & Apply
+      - name: Terraform Init and Apply
         id: tf
-        working-directory: terraform
+        working-directory: cicd_wordpress/terraform
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -35,7 +35,7 @@ jobs:
 
       - name: Extract Public IPs from Terraform
         id: tf_output
-        working-directory: terraform
+        working-directory: cicd_wordpress/terraform
         run: |
           echo "wordpress_ip=$(terraform output -raw wordpress_public_ip)" >> "$GITHUB_OUTPUT"
           echo "http_ip=$(terraform output -raw http_public_ip)" >> "$GITHUB_OUTPUT"
@@ -50,14 +50,14 @@ jobs:
 
       - name: Create Ansible Inventory
         run: |
-          echo "[wordpress]" > ansible/inventory.ini
-          echo "${{ steps.tf_output.outputs.wordpress_ip }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa" >> ansible/inventory.ini
-          echo "" >> ansible/inventory.ini
-          echo "[http]" >> ansible/inventory.ini
-          echo "${{ steps.tf_output.outputs.http_ip }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa" >> ansible/inventory.ini
+          echo "[wordpress]" > cicd_wordpress/ansible/inventory.ini
+          echo "${{ steps.tf_output.outputs.wordpress_ip }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa" >> cicd_wordpress/ansible/inventory.ini
+          echo "" >> cicd_wordpress/ansible/inventory.ini
+          echo "[http]" >> cicd_wordpress/ansible/inventory.ini
+          echo "${{ steps.tf_output.outputs.http_ip }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa" >> cicd_wordpress/ansible/inventory.ini
 
       - name: Install Ansible
         run: sudo apt update && sudo apt install -y ansible
 
       - name: Run Ansible Playbook
-        run: ansible-playbook -i ansible/inventory.ini ansible/playbook.yml
+        run: ansible-playbook -i cicd_wordpress/ansible/inventory.ini cicd_wordpress/ansible/playbook.yml
