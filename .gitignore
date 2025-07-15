@@ -1,0 +1,28 @@
+# === Terraform local data ===
+.terraform/
+*.tfstate
+*.tfstate.*
+*.backup
+crash.log
+
+# === Terraform secrets ===
+*.tfvars
+*.tfvars.json
+
+# === SSH & sensitive keys ===
+*.pem
+*.key
+*.crt
+*.pub
+
+# === Ansible secrets / temp ===
+*.retry
+*.log
+inventory.ini  # ← ignore if dynamically generated
+
+# === VS Code / OS clutter ===
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ===
