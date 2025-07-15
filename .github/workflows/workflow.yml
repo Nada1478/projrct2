@@ -9,13 +9,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code into cicd_wordpress
+      - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          path: cicd_wordpress
 
-      - name: Install Terraform
-        uses: little-core-labs/install-terraform@v2.0.0
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4.1.0
@@ -24,7 +22,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-north-1
 
-      - name: Terraform Init and Apply
+      - name: Terraform Apply
         id: tf
         working-directory: cicd_wordpress/terraform
         env:
@@ -34,29 +32,24 @@ jobs:
         run: |
           terraform init
           terraform apply -auto-approve
-
-      - name: Extract Public IPs from Terraform
-        id: tf_output
-        working-directory: cicd_wordpress/terraform
-        run: |
-          echo "wordpress_ip=$(terraform output -raw wordpress_public_ip)" >> "$GITHUB_OUTPUT"
-          echo "http_ip=$(terraform output -raw http_public_ip)" >> "$GITHUB_OUTPUT"
+          echo "wordpress_ip=$(terraform output -raw wordpress_public_ip)" >> $GITHUB_OUTPUT
+          echo "http_ip=$(terraform output -raw http_public_ip)" >> $GITHUB_OUTPUT
 
       - name: Setup SSH Access
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ steps.tf_output.outputs.wordpress_ip }} >> ~/.ssh/known_hosts
-          ssh-keyscan -H ${{ steps.tf_output.outputs.http_ip }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ steps.tf.outputs.wordpress_ip }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ steps.tf.outputs.http_ip }} >> ~/.ssh/known_hosts
 
       - name: Create Ansible Inventory
         run: |
           echo "[wordpress]" > cicd_wordpress/ansible/inventory.ini
-          echo "${{ steps.tf_output.outputs.wordpress_ip }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa" >> cicd_wordpress/ansible/inventory.ini
+          echo "${{ steps.tf.outputs.wordpress_ip }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa" >> cicd_wordpress/ansible/inventory.ini
           echo "" >> cicd_wordpress/ansible/inventory.ini
           echo "[http]" >> cicd_wordpress/ansible/inventory.ini
-          echo "${{ steps.tf_output.outputs.http_ip }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa" >> cicd_wordpress/ansible/inventory.ini
+          echo "${{ steps.tf.outputs.http_ip }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa" >> cicd_wordpress/ansible/inventory.ini
 
       - name: Install Ansible
         run: sudo apt update && sudo apt install -y ansible
