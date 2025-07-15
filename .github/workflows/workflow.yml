@@ -30,10 +30,18 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: eu-north-1
         run: |
+          set -e
           terraform init
           terraform apply -auto-approve
-          WORDPRESS_IP=$(terraform output -raw wordpress_public_ip)
-          HTTP_IP=$(terraform output -raw http_public_ip)
+
+          WORDPRESS_IP=$(terraform output -raw wordpress_public_ip || echo "")
+          HTTP_IP=$(terraform output -raw http_public_ip || echo "")
+
+          if [ -z "$WORDPRESS_IP" ] || [ -z "$HTTP_IP" ]; then
+            echo "❌ Missing IPs from Terraform outputs!"
+            exit 1
+          fi
+
           echo "wordpress_ip=$WORDPRESS_IP" >> $GITHUB_OUTPUT
           echo "http_ip=$HTTP_IP" >> $GITHUB_OUTPUT
 
