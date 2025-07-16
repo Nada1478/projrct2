@@ -46,10 +46,11 @@ jobs:
             exit 1
           fi
 
-          echo "wordpress_ip=$WORDPRESS_IP" >> $GITHUB_ENV
+          # ✅ SAFELY write to GITHUB_ENV using printf
+          printf "wordpress_ip=%s\n" "$WORDPRESS_IP" >> $GITHUB_ENV
 
           if [ -n "$HTTP_IP" ]; then
-            echo "http_ip=$HTTP_IP" >> $GITHUB_ENV
+            printf "http_ip=%s\n" "$HTTP_IP" >> $GITHUB_ENV
           else
             echo "⚠️ Warning: http_public_ip not found. Skipping HTTP host."
           fi
