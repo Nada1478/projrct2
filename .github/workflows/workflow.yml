@@ -3,6 +3,7 @@ name: wordpress
 on:
   push:
     branches: [main]
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -32,17 +33,8 @@ jobs:
           set -e
           terraform init
           terraform apply -auto-approve
-
-          WORDPRESS_IP=$(terraform output -raw wordpress_public_ip || echo "")
-          HTTP_IP=$(terraform output -raw http_public_ip || echo "")
-
-          if [ -z "$WORDPRESS_IP" ] || [ -z "$HTTP_IP" ]; then
-            echo "❌ Missing IPs from Terraform outputs!"
-            exit 1
-          fi
-
-          echo "wordpress_ip=$WORDPRESS_IP" >> $GITHUB_OUTPUT
-          echo "http_ip=$HTTP_IP" >> $GITHUB_OUTPUT
+          echo "wordpress_ip=$(terraform output -raw wordpress_public_ip)" >> $GITHUB_OUTPUT
+          echo "http_ip=$(terraform output -raw http_public_ip)" >> $GITHUB_OUTPUT
 
       - name: Setup SSH Access
         run: |
