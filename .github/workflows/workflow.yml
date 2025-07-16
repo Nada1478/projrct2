@@ -33,10 +33,12 @@ jobs:
           set -e
           terraform init
           terraform apply -auto-approve
-          WORDPRESS_IP=$(terraform output -raw wordpress_public_ip | tr -d '"')
-          HTTP_IP=$(terraform output -raw http_public_ip | tr -d '"')
-          echo "wordpress_ip=$WORDPRESS_IP" >> $GITHUB_ENV
-          echo "http_ip=$HTTP_IP" >> $GITHUB_ENV
+
+          WORDPRESS_IP=$(terraform output -raw wordpress_public_ip | tr -d '"[:space:]\n\r')
+          HTTP_IP=$(terraform output -raw http_public_ip | tr -d '"[:space:]\n\r')
+
+          printf "wordpress_ip=%s\n" "$WORDPRESS_IP" >> $GITHUB_ENV
+          printf "http_ip=%s\n" "$HTTP_IP" >> $GITHUB_ENV
 
       - name: Setup SSH Access
         run: |
