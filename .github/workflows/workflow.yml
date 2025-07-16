@@ -46,37 +46,31 @@ jobs:
             exit 1
           fi
 
-          # ✅ Write clean, printable values to $GITHUB_ENV
-          echo "wordpress_ip=$WORDPRESS_IP" | sed 's/[^[:print:]]//g' | tee -a $GITHUB_ENV
+          echo "wordpress_ip=$WORDPRESS_IP" >> $GITHUB_OUTPUT
+          echo "http_ip=$HTTP_IP" >> $GITHUB_OUTPUT
 
-          if [ -n "$HTTP_IP" ]; then
-            echo "http_ip=$HTTP_IP" | sed 's/[^[:print:]]//g' | tee -a $GITHUB_ENV
-          else
-            echo "⚠️ Warning: http_public_ip not found. Skipping HTTP host."
-          fi
+      - name: Install Ansible
+        run: sudo apt update && sudo apt install -y ansible
 
       - name: Setup SSH Access
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ env.wordpress_ip }} >> ~/.ssh/known_hosts || true
-          if [ -n "${{ env.http_ip }}" ]; then
-            ssh-keyscan -H ${{ env.http_ip }} >> ~/.ssh/known_hosts || true
+          ssh-keyscan -H ${{ steps.tf.outputs.wordpress_ip }} >> ~/.ssh/known_hosts
+          if [ -n "${{ steps.tf.outputs.http_ip }}" ]; then
+            ssh-keyscan -H ${{ steps.tf.outputs.http_ip }} >> ~/.ssh/known_hosts
           fi
 
       - name: Create Ansible Inventory
         run: |
           echo "[wordpress]" > ansible/inventory.ini
-          echo "${{ env.wordpress_ip }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa" >> ansible/inventory.ini
+          echo "${{ steps.tf.outputs.wordpress_ip }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa" >> ansible/inventory.ini
           echo "" >> ansible/inventory.ini
           echo "[http]" >> ansible/inventory.ini
-          if [ -n "${{ env.http_ip }}" ]; then
-            echo "${{ env.http_ip }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa" >> ansible/inventory.ini
+          if [ -n "${{ steps.tf.outputs.http_ip }}" ]; then
+            echo "${{ steps.tf.outputs.http_ip }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa" >> ansible/inventory.ini
           fi
-
-      - name: Install Ansible
-        run: sudo apt update && sudo apt install -y ansible
 
       - name: Run Ansible Playbook
         run: ansible-playbook -i ansible/inventory.ini ansible/playbook.yml
