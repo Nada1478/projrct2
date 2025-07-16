@@ -34,20 +34,35 @@ jobs:
           terraform init
           terraform apply -auto-approve
 
-          # Strictly extract only valid IPv4 addresses
-          WORDPRESS_IP=$(terraform output -raw wordpress_public_ip | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}')
-          HTTP_IP=$(terraform output -raw http_public_ip | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}')
+          echo "⏳ Extracting Terraform outputs..."
+          WORDPRESS_IP=$(terraform output -raw wordpress_public_ip 2>/dev/null | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}' || true)
+          HTTP_IP=$(terraform output -raw http_public_ip 2>/dev/null | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}' || true)
+
+          echo "📡 wordpress_ip = $WORDPRESS_IP"
+          echo "🌐 http_ip      = $HTTP_IP"
+
+          if [ -z "$WORDPRESS_IP" ]; then
+            echo "❌ Error: wordpress_public_ip is missing!"
+            exit 1
+          fi
 
           echo "wordpress_ip=$WORDPRESS_IP" >> $GITHUB_ENV
-          echo "http_ip=$HTTP_IP" >> $GITHUB_ENV
+
+          if [ -n "$HTTP_IP" ]; then
+            echo "http_ip=$HTTP_IP" >> $GITHUB_ENV
+          else
+            echo "⚠️ Warning: http_public_ip not found. Skipping HTTP host."
+          fi
 
       - name: Setup SSH Access
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ env.wordpress_ip }} >> ~/.ssh/known_hosts
-          ssh-keyscan -H ${{ env.http_ip }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ env.wordpress_ip }} >> ~/.ssh/known_hosts || true
+          if [ -n "${{ env.http_ip }}" ]; then
+            ssh-keyscan -H ${{ env.http_ip }} >> ~/.ssh/known_hosts || true
+          fi
 
       - name: Create Ansible Inventory
         run: |
@@ -55,7 +70,9 @@ jobs:
           echo "${{ env.wordpress_ip }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa" >> ansible/inventory.ini
           echo "" >> ansible/inventory.ini
           echo "[http]" >> ansible/inventory.ini
-          echo "${{ env.http_ip }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa" >> ansible/inventory.ini
+          if [ -n "${{ env.http_ip }}" ]; then
+            echo "${{ env.http_ip }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa" >> ansible/inventory.ini
+          fi
 
       - name: Install Ansible
         run: sudo apt update && sudo apt install -y ansible
